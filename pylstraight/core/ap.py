@@ -214,7 +214,7 @@ def aperiodicpartERB2(
     eew = 1
     lh = mround(2 * eew / evv[1])
     we = hanning(lh, norm=True)
-    hvv = ErbRateToHz(evv)
+    hvv: np.ndarray = ErbRateToHz(evv)
     hvv[0] = 0
     hvv[-1] = fs / 2
     evx = mrange(0, 0.5, evv[-1])

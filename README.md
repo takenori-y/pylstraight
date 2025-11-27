@@ -3,7 +3,7 @@
 This is an unofficial Python reimplementation of the [legacy-STRAIGHT](https://github.com/HidekiKawahara/legacy_STRAIGHT), which was originally written in MATLAB.
 
 [![Latest Manual](https://img.shields.io/badge/docs-latest-blue.svg)](https://takenori-y.github.io/pylstraight/latest/)
-[![Stable Manual](https://img.shields.io/badge/docs-stable-blue.svg)](https://takenori-y.github.io/pylstraight/0.1.0/)
+[![Stable Manual](https://img.shields.io/badge/docs-stable-blue.svg)](https://takenori-y.github.io/pylstraight/0.1.1/)
 [![Downloads](https://static.pepy.tech/badge/pylstraight)](https://pepy.tech/project/pylstraight)
 [![Python Version](https://img.shields.io/pypi/pyversions/pylstraight.svg)](https://pypi.python.org/pypi/pylstraight)
 [![PyPI](https://img.shields.io/pypi/v/pylstraight.svg)](https://pypi.python.org/pypi/pylstraight)
@@ -19,7 +19,7 @@ This is an unofficial Python reimplementation of the [legacy-STRAIGHT](https://g
 
 ## Documentation
 
-- See [this page](https://takenori-y.github.io/pylstraight/0.1.0/) for the reference manual.
+- See [this page](https://takenori-y.github.io/pylstraight/0.1.1/) for the reference manual.
 
 ## Installation
 

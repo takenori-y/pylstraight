@@ -217,14 +217,15 @@ def straightSynthTB07ca(
     if imap is None:
         rate = shiftm / 1000 * fs * sconv
         sy = np.zeros(mround(njj * rate + 3 * fftl + 1))
-        imap = np.arange(len(sy))
-        imap = np.minimum(imap / rate, njj - 1)
+        imap_ = np.arange(len(sy))
+        imap_ = np.minimum(imap_ / rate, njj - 1)
     else:
         sy = np.zeros(len(imap) + 3 * fftl)
-    imap = np.pad(imap, (0, mround(fs * 0.2)))
-    ix = np.where(njj - 1 <= imap)[0][0] + 1
-    rmap = interp1(imap[:ix], np.arange(ix), np.arange(njj))
-    imap = mround(imap)
+        imap_ = imap
+    imap_ = np.pad(imap_, (0, mround(fs * 0.2)))
+    ix = np.where(njj - 1 <= imap_)[0][0] + 1
+    rmap = interp1(imap_[:ix], np.arange(ix), np.arange(njj))
+    imap_: np.ndarray = mround(imap_)
 
     phs, t = fractpitch2(fftl)
 
@@ -250,7 +251,7 @@ def straightSynthTB07ca(
 
     idx = 0.0
     while idx < nsyn - fftl - 11:
-        iix = imap[mround(idx)]
+        iix = imap_[mround(idx)]
         ii = np.clip(iix, 0, njj - 1)
 
         f0 = 200 if f0l[ii] == 0 else max(lowestF0 / pcnv, f0l[ii])
@@ -258,7 +259,7 @@ def straightSynthTB07ca(
 
         tnf0 = fs / f0
         tidx = idx + tnf0
-        tiix = imap[mround(tidx)]
+        tiix = imap_[mround(tidx)]
         tii = np.clip(tiix, 0, njj - 1)
         tf0 = f0l[tii]
         if 0 < tf0 and 0 < f0l[ii] and 0 < f0l[mround((ii + tii) / 2)]:
@@ -271,7 +272,7 @@ def straightSynthTB07ca(
 
         nf0 = fs / f0
         idx += nf0
-        iin = np.clip(imap[mround(idx)], 0, njj - 1)
+        iin = np.clip(imap_[mround(idx)], 0, njj - 1)
         if iin == njj - 1:
             break
 
@@ -296,7 +297,7 @@ def straightSynthTB07ca(
         ccp2 = np.pad(2 * ccp[:, : fftl2 + 1], ((0, 0), (0, fftl2 - 1)))
         ccp2[:, 0] /= 2
         ffx = np.fft.fft(ccp2 * lft) / fftl
-        nidx = mround(idx)
+        nidx: np.ndarray = mround(idx)
 
         nf0 = fs / f0
         frt = idx - nidx
@@ -319,7 +320,8 @@ def straightSynthTB07ca(
         zt0 = nf0 / fs
         ztc = 0.01
         wf = np.zeros_like(mmz)
-        for jj, nf0n in enumerate(mround(nf0)):
+        mnf0: np.ndarray = mround(nf0)
+        for jj, nf0n in enumerate(mnf0):
             ztp = np.arange(nf0n) / fs
             zt0c = 2 * zt0[jj] / ztc
             ztpc = ztp / ztc
@@ -329,7 +331,7 @@ def straightSynthTB07ca(
         wfv = np.fft.fft(wf)
 
         ep = np.zeros_like(mmz)
-        for jj, nf0n in enumerate(mround(nf0)):
+        for jj, nf0n in enumerate(mnf0):
             gh = hanning(nf0n * 2)
             ep[jj, :nf0n] = np.flip(gh[:nf0n])
             ep[jj, -(nf0n - 1) :] = gh[: nf0n - 1]
@@ -352,7 +354,7 @@ def straightSynthTB07ca(
 
     idx = 0.0
     while idx < nsyn - fftl:
-        ii = imap[mround(idx)]
+        ii = imap_[mround(idx)]
         if ii == njj - 1:
             break
         if f0raw[ii] == 0:

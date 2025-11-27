@@ -17,6 +17,10 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 import numpy as np
 from scipy import signal
@@ -129,11 +133,21 @@ def decimate(x: np.ndarray, r: int) -> np.ndarray:
         The decimated signal.
 
     """
-    b, a = signal.cheby1(8, 0.05, 0.8 / r)
-    y = signal.filtfilt(b, a, x, padlen=3 * (len(b) - 1))
-    n = len(x)
-    b = r - (r * math.ceil(n / r) - n) - 1
-    return y[b::r]
+
+    def _decimate(x: np.ndarray, r: int, n: int) -> np.ndarray:
+        b, a = signal.cheby1(n, 0.05, 0.8 / r)
+        y = signal.filtfilt(b, a, x, padlen=3 * (len(b) - 1))
+        n = len(x)
+        s = r - (r * math.ceil(n / r) - n) - 1
+        return y[s::r]
+
+    for n in range(8, 0, -1):
+        y = _decimate(x, r, n)
+        if np.amax(np.abs(y)) < 2:
+            return y
+
+    msg = "Decimation failed."
+    raise RuntimeError(msg)
 
 
 def fftfilt(b: np.ndarray, x: np.ndarray) -> np.ndarray:
@@ -307,7 +321,10 @@ def mround(x: np.ndarray | float) -> np.ndarray | int:
         The rounded number.
 
     """
-    return np.where(x - np.floor(x) < 0.5, np.floor(x), np.ceil(x)).astype(np.int64)
+    out = np.where(x - np.floor(x) < 0.5, np.floor(x), np.ceil(x))
+    if isinstance(x, float):
+        return int(out)
+    return out.astype(np.int64)
 
 
 def mstd(x: np.ndarray, ddof: int = 1) -> np.ndarray:
@@ -371,12 +388,12 @@ def spline(x: np.ndarray, y: np.ndarray, xq: np.ndarray) -> np.ndarray:
     return splev(xq, spl)
 
 
-def randn(shape: list[int], scale: float = 1) -> np.ndarray:
+def randn(shape: int | Sequence[int], scale: float = 1) -> np.ndarray:
     """Generate random numbers from a standard normal distribution.
 
     Parameters
     ----------
-    shape : list[int]
+    shape : int | Sequence[int]
         The shape of the output samples.
 
     scale : float

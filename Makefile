@@ -16,7 +16,7 @@
 
 PROJECT := pylstraight
 
-PYTHON_VERSION := 3.10
+PYTHON_VERSION := 3.11
 
 venv:
 	test -d .venv || python$(PYTHON_VERSION) -m venv .venv
@@ -54,6 +54,9 @@ format: tool
 
 test:
 	. ./.venv/bin/activate && python -m pytest
+
+test-doc:
+	. ./.venv/bin/activate && python -m pytest --doctest-modules --no-cov $(PROJECT)/api.py
 
 test-f0:
 	. ./.venv/bin/activate && python -m pytest tests/test_f0.py

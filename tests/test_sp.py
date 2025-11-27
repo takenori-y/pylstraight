@@ -24,7 +24,7 @@ import pylstraight as pyls
 
 
 def test_sample_with_debug_mode(sample_data: tuple[np.ndarray, int]) -> None:
-    """Test sample data."""
+    """Test sample with debug mode."""
     x, fs = sample_data
     os.environ["PYLSTRAIGHT_DEBUG"] = "1"
     f0 = pyls.fromfile("tests/reference/data.f0")
@@ -34,23 +34,25 @@ def test_sample_with_debug_mode(sample_data: tuple[np.ndarray, int]) -> None:
 
 
 def test_sample_without_debug_mode(sample_data: tuple[np.ndarray, int]) -> None:
-    """Test sample data."""
+    """Test sample without debug mode."""
     x, fs = sample_data
     os.environ["PYLSTRAIGHT_DEBUG"] = "0"
     f0 = pyls.fromfile("tests/reference/data.f0")
     ref_sp = pyls.fromfile("tests/reference/data.sp", fs)
     hyp_sp = pyls.extract_sp(x, fs, f0)
-    assert np.allclose(ref_sp[3:-3], hyp_sp[3:-3], rtol=1e-4)
+    r = 3
+    assert np.allclose(ref_sp[r:-r], hyp_sp[r:-r], rtol=1e-4)
 
 
 def test_short_type_input(sample_data: tuple[np.ndarray, int]) -> None:
-    """Test sample data."""
+    """Test short type input."""
     x, fs = sample_data
     x2 = (x * 32768).astype(np.int16)
     f0 = pyls.fromfile("tests/reference/data.f0")
     sp = pyls.extract_sp(x, fs, f0)
     sp2 = pyls.extract_sp(x2, fs, f0) / 32768
-    assert np.allclose(sp[3:-3], sp2[3:-3], rtol=1e-4)
+    r = 3
+    assert np.allclose(sp[r:-r], sp2[r:-r], rtol=1e-4)
 
 
 def test_all_zero_input() -> None:

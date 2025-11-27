@@ -17,15 +17,15 @@ jobs:
       max-parallel: 4
       matrix:
         include:
-          - python: 3.8
-          - python: 3.13
+          - python: "3.8"
+          - python: "3.14"
 
     steps:
       - name: Clone
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
@@ -42,7 +42,7 @@ jobs:
         run: make check
 
       - name: Test
-        run: make test
+        run: make test test-doc
 
       - name: Coverage
         uses: codecov/codecov-action@v5

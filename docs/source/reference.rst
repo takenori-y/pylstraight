@@ -6,4 +6,5 @@ pylstraight API
     api/analysis
     api/synthesis
     api/conversion
-    api/data
+    api/io
+    api/constants
