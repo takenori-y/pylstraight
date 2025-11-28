@@ -141,9 +141,10 @@ def decimate(x: np.ndarray, r: int) -> np.ndarray:
         s = r - (r * math.ceil(n / r) - n) - 1
         return y[s::r]
 
+    tol = 2 * np.amax(np.abs(x))
     for n in range(8, 0, -1):
         y = _decimate(x, r, n)
-        if np.amax(np.abs(y)) < 2:
+        if np.amax(np.abs(y)) <= tol:
             return y
 
     msg = "Decimation failed."

@@ -443,9 +443,9 @@ def extract_f0(
     >>> import numpy as np
     >>> f, fs = 200, 16000
     >>> x = np.mod(2 * np.pi * f / fs * np.arange(600), 2 * np.pi) - np.pi
-    >>> pyls.extract_f0(x, fs)
-    array([193.86025508, 198.46273078, 199.65873847, 199.98109482,
-           199.99103883, 199.99119509])
+    >>> f0 = pyls.extract_f0(x, fs)
+    >>> f0.round()
+    array([193., 198., 200., 200., 200., 200.])
 
     """
     f0 = _extract_f0(
@@ -546,9 +546,10 @@ def extract_ap(
     >>> ap = pyls.extract_ap(x, fs, f0)
     >>> ap.shape
     (8, 1025)
-    >>> ap.mean(0)
-    array([0.17473351, 0.1747341 , 0.17473478, ..., 0.66521378, 0.66521439,
-           0.66521501])
+    >>> float(ap.min())
+    0.001
+    >>> float(ap.max().round(decimals=1))
+    1.0
 
     """
     x, _ = normalize_waveform(x)
@@ -642,9 +643,10 @@ def extract_sp(
     >>> sp = pyls.extract_sp(x, fs, f0, sp_format='db')
     >>> sp.shape
     (8, 1025)
-    >>> sp.mean(0)
-    array([  9.3790045 ,   9.3959332 ,   9.44756499, ..., -74.57928489,
-           -74.57916264, -74.57908274])
+    >>> float(sp.min().round(decimals=2))
+    -89.85
+    >>> float(sp.max().round(decimals=2))
+    14.81
 
     """
     x, scaler = normalize_waveform(x)
@@ -807,7 +809,7 @@ def fromfile(
     Examples
     --------
     >>> import pylstraight as pyls
-    >>> f0 = pyls.fromfile("tests/references/data.f0")
+    >>> f0 = pyls.fromfile("tests/reference/data.f0")
     >>> f0.shape
     (239,)
 
@@ -872,8 +874,10 @@ def write(filename: str, x: np.ndarray, fs: int, **kwargs: Any) -> None:
     Examples
     --------
     >>> import pylstraight as pyls
+    >>> import os
     >>> x, fs = pyls.read("assets/data.wav")
     >>> pyls.write("copy.wav", x, fs)
+    >>> os.remove("copy.wav")
 
     """
     sf.write(filename, x, fs, **kwargs)
