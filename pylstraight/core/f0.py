@@ -1453,41 +1453,43 @@ def zcontiguousSegment10(
             f0[lb:ub] = f0bk[lb:ub]
         lastend = ub - 1
 
-    if np.any(0 < f0):
-        pv, dv = zpeakdipdetect(pwsdb, mround(81 / shiftm))
-        avf0 = np.mean(f0[0 < f0])
-        logavf0 = np.log2(avf0)
-        relv2 = relv * np.exp(-((np.log2(f0cand) - logavf0) ** 2))
-        reliablelevel = (noiselevel + 2 * mxpwsdb) / 3
-        for ii in range(len(pv)):
-            if reliablelevel < pwsdb[pv[ii]] and f0[pv[ii]] == 0:
-                ary = dv[dv < pv[ii]]
-                lb = 0 if len(ary) == 0 else np.max(ary)
-                ary = dv[pv[ii] < dv]
-                ub = nn if len(ary) == 0 else np.min(ary)
-                peaklvl = pwsdb[pv[ii]]
-                for bp in reversed(range(lb, pv[ii])):
-                    if pwsdb[bp] < peaklvl - 9:
-                        break
-                for ep in range(pv[ii], ub):
-                    if pwsdb[ep] < peaklvl - 9:
-                        break
-                lb = bp
-                ub = ep + 1
-                imx2 = np.unravel_index(np.argmax(relv2[lb:ub]), relv2[lb:ub].shape)[0]
-                cpos = lb + imx2
+    if np.all(f0 == 0):
+        return f0, rel, []
 
-                args1 = [f0cand, relv2, pwsdb + 10]
-                args2 = [lb, ub, f0jumpt, nsdt, noiselevel]
-                f0raw0 = f0cand[:, 0].copy()
-                f0raw1 = f0raw0.copy()
-                lastf0 = f0raw0[cpos] = f0cand[cpos, 0]
-                sprob0 = ztraceInAsegment2(f0raw0, *args1, cpos, lastf0, *args2)
-                lastf0 = f0raw1[cpos] = f0cand[cpos, 1]
-                sprob1 = ztraceInAsegment2(f0raw1, *args1, cpos, lastf0, *args2)
-                imx = np.argmax([sprob0, sprob1])
-                f0raws = [f0raw0, f0raw1]
-                f0[lb:ub] = f0raws[imx][lb:ub]
+    pv, dv = zpeakdipdetect(pwsdb, mround(81 / shiftm))
+    avf0 = np.mean(f0[0 < f0])
+    logavf0 = np.log2(avf0)
+    relv2 = relv * np.exp(-((np.log2(f0cand) - logavf0) ** 2))
+    reliablelevel = (noiselevel + 2 * mxpwsdb) / 3
+    for ii in range(len(pv)):
+        if reliablelevel < pwsdb[pv[ii]] and f0[pv[ii]] == 0:
+            ary = dv[dv < pv[ii]]
+            lb = 0 if len(ary) == 0 else np.max(ary)
+            ary = dv[pv[ii] < dv]
+            ub = nn if len(ary) == 0 else np.min(ary)
+            peaklvl = pwsdb[pv[ii]]
+            for bp in reversed(range(lb, pv[ii])):
+                if pwsdb[bp] < peaklvl - 9:
+                    break
+            for ep in range(pv[ii], ub):
+                if pwsdb[ep] < peaklvl - 9:
+                    break
+            lb = bp
+            ub = ep + 1
+            imx2 = np.unravel_index(np.argmax(relv2[lb:ub]), relv2[lb:ub].shape)[0]
+            cpos = lb + imx2
+
+            args1 = [f0cand, relv2, pwsdb + 10]
+            args2 = [lb, ub, f0jumpt, nsdt, noiselevel]
+            f0raw0 = f0cand[:, 0].copy()
+            f0raw1 = f0raw0.copy()
+            lastf0 = f0raw0[cpos] = f0cand[cpos, 0]
+            sprob0 = ztraceInAsegment2(f0raw0, *args1, cpos, lastf0, *args2)
+            lastf0 = f0raw1[cpos] = f0cand[cpos, 1]
+            sprob1 = ztraceInAsegment2(f0raw1, *args1, cpos, lastf0, *args2)
+            imx = np.argmax([sprob0, sprob1])
+            f0raws = [f0raw0, f0raw1]
+            f0[lb:ub] = f0raws[imx][lb:ub]
 
     cseg = []
     InInd = 0
