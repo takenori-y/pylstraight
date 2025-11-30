@@ -28,6 +28,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = ["numpy >= 1.20.3", "scipy >= 1.7.0", "soundfile >= 0.10.2"]
@@ -80,7 +81,6 @@ ignore = [
   "N803",    # Argument name should be lowercase
   "N806",    # Variable in function should be lowercase
   "ISC001",  # The following rules may cause conflicts when used with the formatter
-  "PD901",   # Avoid using the generic variable name `df` for DataFrames
   "PLR0912", # Too many branches
   "PLR0913", # Too many arguments in function definition
   "PLR0914", # Too many local variables
@@ -93,6 +93,11 @@ ignore = [
 ]
 preview = true
 exclude = ["__init__.py"]
+
+[tool.pyright]
+reportCallIssue = false
+reportMissingImports = false
+reportPossiblyUnboundVariable = false
 
 [tool.codespell]
 skip = "./docs/build,./tools"

@@ -40,13 +40,24 @@ def test_sample_without_debug_mode(sample_data: tuple[np.ndarray, int]) -> None:
     hyp_f0 = pyls.extract_f0(x, fs)
     ref_f0 = pyls.fromfile("tests/reference/data.f0")
     # The error arises from the decimation function.
-    assert np.allclose(hyp_f0, ref_f0, atol=2.5, rtol=0)
+    assert np.allclose(hyp_f0, ref_f0, atol=2.5, rtol=0.0)
+
+
+def test_f0_range_refinement(sample_data: tuple[np.ndarray, int]) -> None:
+    """Test f0 range refinement."""
+    x, fs = sample_data
+    hyp_f0 = pyls.extract_f0(x, fs, refine_f0_range=True)
+    ref_f0 = pyls.extract_f0(x, fs, refine_f0_range=False)
+    mask = np.logical_and(hyp_f0 > 0, ref_f0 > 0)
+    assert np.mean(np.abs(hyp_f0[mask] - ref_f0[mask])) < 0.5
 
 
 def test_all_zero_input() -> None:
     """Test all zero input."""
     x, fs = np.zeros(1000), 8000
     f0 = pyls.extract_f0(x, fs)
+    assert np.all(f0 == 0)
+    f0 = pyls.extract_f0(x, fs, refine_f0_range=True)
     assert np.all(f0 == 0)
 
 

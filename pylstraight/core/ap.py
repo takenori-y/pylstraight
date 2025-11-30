@@ -1,5 +1,6 @@
 # ------------------------------------------------------------------------ #
 # Copyright 2025 Takenori Yoshimura                                        #
+# Copyright 2018 Hideki Kawahara (Original Author)                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -214,7 +215,7 @@ def aperiodicpartERB2(
     eew = 1
     lh = mround(2 * eew / evv[1])
     we = hanning(lh, norm=True)
-    hvv = ErbRateToHz(evv)
+    hvv: np.ndarray = ErbRateToHz(evv)
     hvv[0] = 0
     hvv[-1] = fs / 2
     evx = mrange(0, 0.5, evv[-1])

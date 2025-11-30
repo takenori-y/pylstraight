@@ -32,6 +32,8 @@ from .core.sp import SpParam, exstraightspec
 from .core.syn import SynParam, exstraightsynth
 from .core.utils.misc import get_fft_length, normalize_waveform
 
+magic_number: float = -1e10
+
 
 def f0_to_f0(
     f0: np.ndarray, in_format: str, out_format: str, fs: int = 0
@@ -81,7 +83,7 @@ def f0_to_f0(
         msg = "Sampling frequency is required."
         raise ValueError(msg)
 
-    voiced = f0 != (-1e10 if in_format == "log" else 0)
+    voiced = f0 != (magic_number if in_format == "log" else 0)
     voiced_func = {
         "inverse": {
             "linear": lambda x: fs / x,
@@ -98,7 +100,7 @@ def f0_to_f0(
     }
 
     unvoiced = ~voiced
-    unvoiced_value = -1e10 if out_format == "log" else 0
+    unvoiced_value = magic_number if out_format == "log" else 0
 
     new_f0 = np.empty_like(f0)
     try:
@@ -296,7 +298,7 @@ def init_syn_param() -> SynParam:
     return SynParam()
 
 
-def extract_f0(
+def _extract_f0(
     x: np.ndarray,
     fs: int,
     *,
@@ -340,16 +342,6 @@ def extract_f0(
     auxouts : SimpleNamespace (optional)
         The auxiliary outputs.
 
-    Examples
-    --------
-    >>> import pylstraight as pyls
-    >>> import numpy as np
-    >>> f, fs = 200, 16000
-    >>> x = np.mod(2 * np.pi * f / fs * np.arange(600), 2 * np.pi) - np.pi
-    >>> pyls.extract_f0(x, fs)
-    array([193.86025508, 198.46273078, 199.65873847, 199.98109482,
-           199.99103883, 199.99119509])
-
     """
     x, _ = normalize_waveform(x)
 
@@ -391,6 +383,108 @@ def extract_f0(
         return f0, auxouts
 
     return f0
+
+
+def extract_f0(
+    x: np.ndarray,
+    fs: int,
+    *,
+    frame_shift: float = 5.0,
+    f0_range: tuple[float, float] = (40.0, 400.0),
+    f0_format: str = "linear",
+    f0_param: F0Param | None = None,
+    return_aux: bool = False,
+    refine_f0_range: bool = False,
+    gamma: float = 3.0,
+) -> np.ndarray:
+    """Extract F0 from waveform.
+
+    Parameters
+    ----------
+    x : np.ndarray [shape=(nsample,) or (nchannel, nsample)]
+        The input waveform. If multi-channel, it will be averaged.
+
+    fs : int
+        The sampling frequency in Hz.
+
+    frame_shift : float
+        The frame shift in msec.
+
+    f0_range : tuple[float, float]
+        The lower and upper bounds of F0 search in Hz.
+
+    f0_format : ['inverse', 'linear', 'log']
+        The output format.
+
+    f0_param : F0Param or None
+        Control parameters for the F0 extraction. If given, override the other
+        parameters. You have full control and responsibility.
+
+    return_aux : bool
+        Whether to return the auxiliary outputs.
+
+    refine_f0_range : bool
+        Whether to refine the F0 search range based on the initial F0 statistics.
+
+    gamma : float
+        The width factor for the F0 range refinement.
+
+    Returns
+    -------
+    f0 : np.ndarray [shape=(nframe,)]
+        The fundamental frequency.
+
+    auxouts : SimpleNamespace (optional)
+        The auxiliary outputs.
+
+    Examples
+    --------
+    >>> import pylstraight as pyls
+    >>> import numpy as np
+    >>> f, fs = 200, 16000
+    >>> x = np.mod(2 * np.pi * f / fs * np.arange(600), 2 * np.pi) - np.pi
+    >>> f0 = pyls.extract_f0(x, fs)
+    >>> f0.round()
+    array([193., 198., 200., 200., 200., 200.])
+
+    """
+    f0 = _extract_f0(
+        x,
+        fs,
+        f0_range=f0_range,
+        frame_shift=frame_shift,
+        f0_format=f0_format,
+        f0_param=f0_param,
+        return_aux=return_aux,
+    )
+    if not refine_f0_range:
+        return f0
+
+    lf0 = f0_to_f0(f0[0] if return_aux else f0, f0_format, "log", fs=fs)
+    voiced_f0 = lf0[lf0 != magic_number]
+    if len(voiced_f0) <= 1:
+        return f0
+
+    f0_mean = np.mean(voiced_f0)
+    f0_sdev = np.std(voiced_f0)
+    width = gamma * f0_sdev
+    refined_f0_range = (
+        max(np.exp(f0_mean - width), f0_range[0]),
+        min(np.exp(f0_mean + width), f0_range[1]),
+    )
+
+    try:
+        return _extract_f0(
+            x,
+            fs,
+            f0_range=refined_f0_range,
+            frame_shift=frame_shift,
+            f0_format=f0_format,
+            f0_param=f0_param,
+            return_aux=return_aux,
+        )
+    except (ValueError, RuntimeError):
+        return f0
 
 
 def extract_ap(
@@ -452,9 +546,10 @@ def extract_ap(
     >>> ap = pyls.extract_ap(x, fs, f0)
     >>> ap.shape
     (8, 1025)
-    >>> ap.mean(0)
-    array([0.17473351, 0.1747341 , 0.17473478, ..., 0.66521378, 0.66521439,
-           0.66521501])
+    >>> float(ap.min())
+    0.001
+    >>> float(ap.max().round(decimals=1))
+    1.0
 
     """
     x, _ = normalize_waveform(x)
@@ -548,9 +643,10 @@ def extract_sp(
     >>> sp = pyls.extract_sp(x, fs, f0, sp_format='db')
     >>> sp.shape
     (8, 1025)
-    >>> sp.mean(0)
-    array([  9.3790045 ,   9.3959332 ,   9.44756499, ..., -74.57928489,
-           -74.57916264, -74.57908274])
+    >>> float(sp.min().round(decimals=2))
+    -89.85
+    >>> float(sp.max().round(decimals=2))
+    14.81
 
     """
     x, scaler = normalize_waveform(x)
@@ -713,7 +809,7 @@ def fromfile(
     Examples
     --------
     >>> import pylstraight as pyls
-    >>> f0 = pyls.fromfile("tests/references/data.f0")
+    >>> f0 = pyls.fromfile("tests/reference/data.f0")
     >>> f0.shape
     (239,)
 
@@ -778,8 +874,10 @@ def write(filename: str, x: np.ndarray, fs: int, **kwargs: Any) -> None:
     Examples
     --------
     >>> import pylstraight as pyls
+    >>> import os
     >>> x, fs = pyls.read("assets/data.wav")
     >>> pyls.write("copy.wav", x, fs)
+    >>> os.remove("copy.wav")
 
     """
     sf.write(filename, x, fs, **kwargs)

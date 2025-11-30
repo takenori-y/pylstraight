@@ -1,5 +1,5 @@
-Data
-====
+I/O
+===
 
 .. autofunction:: pylstraight.read
 

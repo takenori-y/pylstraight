@@ -1,5 +1,6 @@
 # ------------------------------------------------------------------------ #
 # Copyright 2025 Takenori Yoshimura                                        #
+# Copyright 2018 Hideki Kawahara (Original Author)                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -96,7 +97,7 @@ def SourceInfobyMultiCues050111(
     x: np.ndarray,
     fs: int,
     prm: F0Param | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, SimpleNamespace]:
     """Perform source information extraction using multiple cues.
 
     Parameters
@@ -488,6 +489,7 @@ def zwvlt2ifq(pm: np.ndarray, fs: float) -> np.ndarray:
     npm = pm / (np.abs(pm) + 1e-10)
     pif = np.abs(np.diff(npm, axis=0))
     pif = np.pad(pif, ((1, 0), (0, 0)), mode="edge")
+    pif = np.clip(pif, 0, 2)
     return fs / np.pi * np.arcsin(pif / 2)
 
 
@@ -1288,7 +1290,7 @@ def zcontiguousSegment10(
     shiftm: float,
     f0jumpt: float,
     nsdt: float,
-) -> tuple[np.ndarray, np.ndarray, list[int, int]]:
+) -> tuple[np.ndarray, np.ndarray, list[list[int]]]:
     """Search for contiguous segments that consists of best candidates.
 
     Parameters
@@ -1319,7 +1321,7 @@ def zcontiguousSegment10(
     rel : np.ndarray [shape=(nn,)]
         Reliability.
 
-    cseg : list[int, int]
+    cseg : list[list[int]]
         Segment indices.
 
     """
@@ -1452,6 +1454,9 @@ def zcontiguousSegment10(
             f0[lb:ub] = f0bk[lb:ub]
         lastend = ub - 1
 
+    if np.all(f0 == 0):
+        return f0, rel, []
+
     pv, dv = zpeakdipdetect(pwsdb, mround(81 / shiftm))
     avf0 = np.mean(f0[0 < f0])
     logavf0 = np.log2(avf0)
@@ -1496,7 +1501,7 @@ def zcontiguousSegment10(
         elif InInd == 1 and f0[ii] == 0:
             cseg[-1].append(ii)
             InInd = 0
-    if len(cseg[-1]) == 1:
+    if InInd == 1:
         cseg[-1].append(nn)
 
     return f0, rel, cseg
@@ -1717,7 +1722,7 @@ def ztraceInAsegment2(
 
 def zfillf0gaps6(
     f0: np.ndarray,
-    cseg: list[int, int],
+    cseg: list[list[int]],
     f0cand: np.ndarray,
     relv: np.ndarray,
     pwsdb: np.ndarray,
@@ -1732,7 +1737,7 @@ def zfillf0gaps6(
     f0 : np.ndarray [shape=(nn,)]
         Fundamental frequency.
 
-    cseg : list[int, int]
+    cseg : list[list[int]]
         Segment indices.
 
     f0cand : np.ndarray [shape=(nn, 6)]
