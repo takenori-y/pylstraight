@@ -135,8 +135,8 @@ def decimate(x: np.ndarray, r: int) -> np.ndarray:
     """
 
     def _decimate(x: np.ndarray, r: int, n: int) -> np.ndarray:
-        b, a = signal.cheby1(n, 0.05, 0.8 / r)
-        y = signal.filtfilt(b, a, x, padlen=3 * (len(b) - 1))
+        sos = signal.cheby1(n, 0.05, 0.8 / r, output="sos")
+        y = signal.sosfiltfilt(sos, x, padlen=None)
         n = len(x)
         s = r - (r * math.ceil(n / r) - n) - 1
         return y[s::r]
