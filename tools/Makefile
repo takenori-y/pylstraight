@@ -14,10 +14,17 @@
 # limitations under the License.                                           #
 # ------------------------------------------------------------------------ #
 
+PINACT_VERSION  := 3.10.1
 TAPLO_VERSION   := 0.10.0
 YAMLFMT_VERSION := 0.21.0
 
-all: straight taplo yamlfmt
+all: pinact straight taplo yamlfmt
+
+pinact:
+	mkdir -p pinact
+	wget https://github.com/suzuki-shunsuke/pinact/releases/download/v$(PINACT_VERSION)/pinact_linux_amd64.tar.gz -O pinact.tar.gz
+	tar xzf pinact.tar.gz -C pinact
+	rm -f pinact.tar.gz
 
 straight:
 	git clone https://github.com/HidekiKawahara/legacy_STRAIGHT.git straight
@@ -36,6 +43,6 @@ yamlfmt:
 	rm -f yamlfmt.tar.gz
 
 clean:
-	rm -rf straight taplo yamlfmt
+	rm -rf pinact straight taplo yamlfmt
 
 .PHONY: all clean
