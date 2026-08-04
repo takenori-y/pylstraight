@@ -50,7 +50,7 @@ dev = [
 ]
 
 [project.urls]
-Documentation = "https://takenori-y.github.io/pylstraight/latest/"
+Documentation = "https://takenori-y.github.io/pylstraight/stable/"
 Source = "https://github.com/takenori-y/pylstraight"
 
 [tool.hatch.build.targets.sdist]
