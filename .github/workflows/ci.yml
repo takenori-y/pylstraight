@@ -39,7 +39,7 @@ jobs:
           sudo apt-get install -qq -y libsndfile1
 
       - name: Install
-        run: make PYTHON_VERSION=${{ matrix.python }}
+        run: make PYTHON_VERSION=${{ matrix.python }} PIP_TIME_LIMIT=
 
       - name: Check
         run: make check
