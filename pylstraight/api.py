@@ -137,9 +137,9 @@ def ap_to_ap(ap: np.ndarray, in_format: str, out_format: str) -> np.ndarray:
     >>> import numpy as np
     >>> ap = np.array([[0.3, 0.5, 0.9]])
     >>> pyls.ap_to_ap(ap, "a", "p")
-    array([[0.7, 0.5, 0.1]])
+    array([[0.9539392 , 0.8660254 , 0.43588989]])
     >>> pyls.ap_to_ap(ap, "a", "a/p")
-    array([[0.42857143, 1.        , 9.        ]])
+    array([[0.31448545, 0.57735027, 2.0647416 ]])
 
     """
     if not isinstance(ap, np.ndarray):
@@ -152,23 +152,23 @@ def ap_to_ap(ap: np.ndarray, in_format: str, out_format: str) -> np.ndarray:
 
     func = {
         "a": {
-            "p": lambda x: 1 - x,
-            "a/p": lambda x: x / (1 - x),
-            "p/a": lambda x: (1 - x) / x,
+            "p": lambda x: np.sqrt(1 - x * x),
+            "a/p": lambda x: x / np.sqrt(1 - x * x),
+            "p/a": lambda x: np.sqrt(1 - x * x) / x,
         },
         "p": {
-            "a": lambda x: 1 - x,
-            "a/p": lambda x: (1 - x) / x,
-            "p/a": lambda x: x / (1 - x),
+            "a": lambda x: np.sqrt(1 - x * x),
+            "a/p": lambda x: np.sqrt(1 - x * x) / x,
+            "p/a": lambda x: x / np.sqrt(1 - x * x),
         },
         "a/p": {
-            "a": lambda x: x / (1 + x),
-            "p": lambda x: 1 / (1 + x),
+            "a": lambda x: x / np.sqrt(1 + x * x),
+            "p": lambda x: 1 / np.sqrt(1 + x * x),
             "p/a": lambda x: 1 / x,
         },
         "p/a": {
-            "a": lambda x: 1 / (1 + x),
-            "p": lambda x: x / (1 + x),
+            "a": lambda x: 1 / np.sqrt(1 + x * x),
+            "p": lambda x: x / np.sqrt(1 + x * x),
             "a/p": lambda x: 1 / x,
         },
     }
@@ -588,7 +588,7 @@ def extract_ap(
         ap_param,
     )
     ap = sp_to_sp(ap, "db", "linear")
-    ap = np.clip(ap, ap_floor, 1 - ap_floor)
+    ap = np.clip(ap, ap_floor, np.sqrt(1 - ap_floor * ap_floor))
     return ap_to_ap(ap, "a", ap_format)
 
 
