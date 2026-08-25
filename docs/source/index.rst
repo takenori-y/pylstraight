@@ -6,7 +6,7 @@ reimplementation of the legacy-STRAIGHT, which was originally written in MATLAB.
 
 .. toctree::
 
-    API reference <reference>
+    API Reference <reference>
 
 
 Indices
