@@ -17,16 +17,20 @@
 from __future__ import annotations
 
 import math
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 
 import numpy as np
 from scipy import signal
 from scipy.interpolate import interp1d, splev, splrep
 
 TAU = 2 * np.pi
+
+_rng: ContextVar[np.random.Generator | None] = ContextVar("rng", default=None)
 
 
 def abs2(x: np.ndarray) -> np.ndarray:
@@ -322,7 +326,8 @@ def mround(x: np.ndarray | float) -> np.ndarray | int:
         The rounded number.
 
     """
-    out = np.where(x - np.floor(x) < 0.5, np.floor(x), np.ceil(x))
+    ax = np.abs(x)
+    out = np.sign(x) * np.where(ax - np.floor(ax) < 0.5, np.floor(ax), np.ceil(ax))
     if isinstance(x, float):
         return int(out)
     return out.astype(np.int64)
@@ -406,8 +411,30 @@ def randn(shape: int | Sequence[int], scale: float = 1) -> np.ndarray:
         The generated samples.
 
     """
-    rng = np.random.default_rng()
+    rng = _rng.get()
+    if rng is None:
+        rng = np.random.default_rng()
     return rng.standard_normal(shape) * scale
+
+
+@contextmanager
+def fixed_seed(seed: int | None) -> Generator[None, None, None]:
+    """Fix the random number generator used by `randn` within the context.
+
+    Parameters
+    ----------
+    seed : int or None
+        The random seed. If None, the generator is not fixed.
+
+    """
+    if seed is None:
+        yield
+        return
+    token = _rng.set(np.random.default_rng(seed))
+    try:
+        yield
+    finally:
+        _rng.reset(token)
 
 
 def sigmoid(x: np.ndarray) -> np.ndarray:

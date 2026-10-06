@@ -30,9 +30,36 @@ from .core.ap import ApParam, exstraightAPind
 from .core.f0 import F0Param, MulticueF0v14
 from .core.sp import SpParam, exstraightspec
 from .core.syn import SynParam, exstraightsynth
+from .core.utils.mat import fixed_seed
 from .core.utils.misc import get_fft_length, normalize_waveform
 
+__all__ = [
+    "ApParam",
+    "F0Param",
+    "SpParam",
+    "SynParam",
+    "ap_to_ap",
+    "extract_ap",
+    "extract_f0",
+    "extract_sp",
+    "f0_to_f0",
+    "fromfile",
+    "init_ap_param",
+    "init_f0_param",
+    "init_sp_param",
+    "init_syn_param",
+    "magic_number",
+    "min_f0",
+    "min_fs",
+    "read",
+    "sp_to_sp",
+    "synthesize",
+    "write",
+]
+
 magic_number: float = -1e10
+min_f0: float = 40.0
+min_fs: int = 8000
 
 
 def f0_to_f0(
@@ -307,7 +334,7 @@ def _extract_f0(
     f0_format: str = "linear",
     f0_param: F0Param | None = None,
     return_aux: bool = False,
-) -> np.ndarray:
+) -> np.ndarray | tuple[np.ndarray, SimpleNamespace]:
     """Extract F0 from waveform.
 
     Parameters
@@ -347,16 +374,16 @@ def _extract_f0(
 
     f0_floor, f0_ceil = f0_range
 
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
         msg = "Minimum frame shift is 1 ms."
         raise ValueError(msg)
 
-    if f0_floor < 40:
-        msg = "Minimum F0 floor is 40 Hz."
+    if f0_floor < min_f0:
+        msg = f"Minimum F0 floor is {min_f0} Hz."
         raise ValueError(msg)
 
     if fs / 2 < f0_ceil:
@@ -376,6 +403,7 @@ def _extract_f0(
 
     f0, vuv, auxouts = MulticueF0v14(x, fs, f0_param)
     f0 *= vuv
+    f0[(f0 != 0) & (f0 < f0_floor)] = f0_floor
     f0[f0_ceil < f0] = f0_ceil
     f0 = f0_to_f0(f0, "linear", f0_format, fs=fs)
 
@@ -396,7 +424,8 @@ def extract_f0(
     return_aux: bool = False,
     refine_f0_range: bool = False,
     gamma: float = 3.0,
-) -> np.ndarray:
+    seed: int | None = None,
+) -> np.ndarray | tuple[np.ndarray, SimpleNamespace]:
     """Extract F0 from waveform.
 
     Parameters
@@ -429,6 +458,9 @@ def extract_f0(
     gamma : float
         The width factor for the F0 range refinement.
 
+    seed : int or None
+        The random seed to make the results reproducible.
+
     Returns
     -------
     f0 : np.ndarray [shape=(nframe,)]
@@ -448,43 +480,44 @@ def extract_f0(
     array([193., 198., 200., 200., 200., 200.])
 
     """
-    f0 = _extract_f0(
-        x,
-        fs,
-        f0_range=f0_range,
-        frame_shift=frame_shift,
-        f0_format=f0_format,
-        f0_param=f0_param,
-        return_aux=return_aux,
-    )
-    if not refine_f0_range:
-        return f0
-
-    lf0 = f0_to_f0(f0[0] if return_aux else f0, f0_format, "log", fs=fs)
-    voiced_f0 = lf0[lf0 != magic_number]
-    if len(voiced_f0) <= 1:
-        return f0
-
-    f0_mean = np.mean(voiced_f0)
-    f0_sdev = np.std(voiced_f0)
-    width = gamma * f0_sdev
-    refined_f0_range = (
-        max(np.exp(f0_mean - width), f0_range[0]),
-        min(np.exp(f0_mean + width), f0_range[1]),
-    )
-
-    try:
-        return _extract_f0(
+    with fixed_seed(seed):
+        f0 = _extract_f0(
             x,
             fs,
-            f0_range=refined_f0_range,
+            f0_range=f0_range,
             frame_shift=frame_shift,
             f0_format=f0_format,
             f0_param=f0_param,
             return_aux=return_aux,
         )
-    except (ValueError, RuntimeError):
-        return f0
+        if not refine_f0_range:
+            return f0
+
+        lf0 = f0_to_f0(f0[0] if return_aux else f0, f0_format, "log", fs=fs)
+        voiced_f0 = lf0[lf0 != magic_number]
+        if len(voiced_f0) <= 1:
+            return f0
+
+        f0_mean = np.mean(voiced_f0)
+        f0_sdev = np.std(voiced_f0)
+        width = gamma * f0_sdev
+        refined_f0_range = (
+            max(np.exp(f0_mean - width), f0_range[0]),
+            min(np.exp(f0_mean + width), f0_range[1]),
+        )
+
+        try:
+            return _extract_f0(
+                x,
+                fs,
+                f0_range=refined_f0_range,
+                frame_shift=frame_shift,
+                f0_format=f0_format,
+                f0_param=f0_param,
+                return_aux=return_aux,
+            )
+        except (ValueError, RuntimeError):
+            return f0
 
 
 def extract_ap(
@@ -498,6 +531,7 @@ def extract_ap(
     f0_format: str = "linear",
     ap_format: str = "a",
     ap_param: ApParam | None = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """Extract aperiodicity from waveform.
 
@@ -531,6 +565,9 @@ def extract_ap(
         Control parameters for the aperiodicity extraction. If given, override the other
         parameters. You have full control and responsibility.
 
+    seed : int or None
+        The random seed to make the results reproducible.
+
     Returns
     -------
     out : np.ndarray [shape=(nframe, nfreq)]
@@ -554,8 +591,8 @@ def extract_ap(
     """
     x, _ = normalize_waveform(x)
 
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
@@ -580,13 +617,21 @@ def extract_ap(
         )
         raise ValueError(msg)
 
-    ap = exstraightAPind(
-        x,
-        fs,
-        f0_to_f0(f0, f0_format, "linear", fs=fs),
-        None if aux is None else aux.refined_cn,
-        ap_param,
-    )
+    if aux is not None and len(aux.refined_cn) != len(f0):
+        msg = (
+            "The length of the auxiliary output is not consistent with F0: "
+            f"aux {len(aux.refined_cn)} vs f0 {len(f0)}."
+        )
+        raise ValueError(msg)
+
+    with fixed_seed(seed):
+        ap = exstraightAPind(
+            x,
+            fs,
+            f0_to_f0(f0, f0_format, "linear", fs=fs),
+            None if aux is None else aux.refined_cn,
+            ap_param,
+        )
     ap = sp_to_sp(ap, "db", "linear")
     ap = np.clip(ap, ap_floor, np.sqrt(1 - ap_floor * ap_floor))
     return ap_to_ap(ap, "a", ap_format)
@@ -601,6 +646,7 @@ def extract_sp(
     f0_format: str = "linear",
     sp_format: str = "linear",
     sp_param: SpParam | None = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """Extract spectrum from waveform.
 
@@ -628,6 +674,9 @@ def extract_sp(
         Control parameters for the spectrum extraction. If given, override the other
         parameters. You have full control and responsibility.
 
+    seed : int or None
+        The random seed to make the results reproducible.
+
     Returns
     -------
     out : np.ndarray [shape=(nframe, nfreq)]
@@ -651,8 +700,8 @@ def extract_sp(
     """
     x, scaler = normalize_waveform(x)
 
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
@@ -676,7 +725,8 @@ def extract_sp(
         )
         raise ValueError(msg)
 
-    sp = exstraightspec(x, f0_to_f0(f0, f0_format, "linear", fs=fs), fs, sp_param)
+    with fixed_seed(seed):
+        sp = exstraightspec(x, f0_to_f0(f0, f0_format, "linear", fs=fs), fs, sp_param)
     if scaler != 1:
         sp *= scaler
     return sp_to_sp(sp, "linear", sp_format)
@@ -693,6 +743,7 @@ def synthesize(
     ap_format: str = "a",
     sp_format: str = "linear",
     syn_param: SynParam | None = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """Synthesize waveform from F0, aperiodicity, and spectrum.
 
@@ -726,6 +777,9 @@ def synthesize(
         Control parameters for the synthesis. If given, override the other parameters.
         You have full control and responsibility.
 
+    seed : int or None
+        The random seed to make the results reproducible.
+
     Returns
     -------
     out : np.ndarray [shape=(nsample,)]
@@ -745,8 +799,8 @@ def synthesize(
     (2400,)
 
     """
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
@@ -768,13 +822,14 @@ def synthesize(
         syn_param = init_syn_param()
         syn_param.spectral_update_interval = frame_shift
 
-    return exstraightsynth(
-        f0_to_f0(f0, f0_format, "linear", fs=fs),
-        sp_to_sp(sp, sp_format, "linear"),
-        sp_to_sp(ap_to_ap(ap, ap_format, "a"), "linear", "db"),
-        fs,
-        syn_param,
-    )
+    with fixed_seed(seed):
+        return exstraightsynth(
+            f0_to_f0(f0, f0_format, "linear", fs=fs),
+            sp_to_sp(sp, sp_format, "linear"),
+            sp_to_sp(ap_to_ap(ap, ap_format, "a"), "linear", "db"),
+            fs,
+            syn_param,
+        )
 
 
 def fromfile(
@@ -851,6 +906,8 @@ def read(filename: str, **kwargs: Any) -> tuple[np.ndarray, int]:
 
     """
     x, fs = sf.read(filename, **kwargs)
+    if x.ndim == 2:
+        x = x.T
     return x, fs
 
 
@@ -880,4 +937,6 @@ def write(filename: str, x: np.ndarray, fs: int, **kwargs: Any) -> None:
     >>> os.remove("copy.wav")
 
     """
+    if x.ndim == 2:
+        x = x.T
     sf.write(filename, x, fs, **kwargs)

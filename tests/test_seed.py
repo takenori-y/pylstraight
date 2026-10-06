@@ -14,4 +14,44 @@
 # limitations under the License.                                           #
 # ------------------------------------------------------------------------ #
 
-__version__ = "0.1.3"
+from __future__ import annotations
+
+import numpy as np
+
+import pylstraight as pyls
+
+
+def analyze(seed: int | None) -> tuple[np.ndarray, ...]:
+    """Run the whole analysis and synthesis with the given seed.
+
+    Parameters
+    ----------
+    seed : int or None
+        The random seed.
+
+    Returns
+    -------
+    out : tuple[np.ndarray, ...]
+        The F0, aperiodicity, spectrum, and synthesized waveform.
+
+    """
+    x, fs = pyls.read("tools/straight/src/vaiueo2d.wav")
+    x = x[: fs // 2]
+    f0 = pyls.extract_f0(x, fs, seed=seed)
+    ap = pyls.extract_ap(x, fs, f0, seed=seed)
+    sp = pyls.extract_sp(x, fs, f0, seed=seed)
+    syn = pyls.synthesize(f0, ap, sp, fs, seed=seed)
+    return f0, ap, sp, syn
+
+
+def test_same_seed_gives_same_results() -> None:
+    """Test that the same seed reproduces the results."""
+    for a, b in zip(analyze(0), analyze(0)):
+        np.testing.assert_array_equal(a, b)
+
+
+def test_no_seed_gives_different_results() -> None:
+    """Test that the results vary without a seed."""
+    *_, syn1 = analyze(None)
+    *_, syn2 = analyze(None)
+    assert not np.array_equal(syn1, syn2)

@@ -61,6 +61,26 @@ def test_all_zero_input() -> None:
     assert np.all(f0 == 0)
 
 
+@pytest.mark.filterwarnings("error::RuntimeWarning")
+def test_dc_input() -> None:
+    """Test DC input."""
+    x, fs = np.ones(16000) * 0.5, 16000
+    f0 = pyls.extract_f0(x, fs, seed=0)
+    assert np.all((f0 == 0) | ((40 <= f0) & (f0 <= 400)))
+    pyls.extract_sp(x, fs, f0)
+
+
+def test_lower_limits() -> None:
+    """Test the supported lower limits of the sampling frequency and F0."""
+    fs = pyls.min_fs
+    x = np.zeros(fs)
+    pyls.extract_f0(x, fs, f0_range=(pyls.min_f0, 400))
+    with pytest.raises(ValueError, match="sampling frequency"):
+        pyls.extract_f0(x, fs - 1)
+    with pytest.raises(ValueError, match="F0 floor"):
+        pyls.extract_f0(x, fs, f0_range=(pyls.min_f0 - 1, 400))
+
+
 def test_very_short_input() -> None:
     """Test very short input."""
     x, fs = np.zeros(10), 8000
