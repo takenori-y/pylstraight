@@ -156,7 +156,6 @@ def straightBodyC03ma(
 
     b, a = butter(6, 70 / fs * 2)
     xh = mfilter(b, a, x)
-    rmsp = mstd(xh)
 
     b, a = butter(6, 300 / fs * 2)
     xh2 = mfilter(b, a, x)

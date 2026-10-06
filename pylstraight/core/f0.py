@@ -148,7 +148,9 @@ def SourceInfobyMultiCues050111(
         x, fs, f0floor, nvc, nvo, mu, shiftm, smp, minm, pcIF, ncIF
     )
     if f0v.shape[1] == 0:
-        return np.zeros(f0v.shape[0]), np.zeros(f0v.shape[0]), SimpleNamespace()
+        nn = f0v.shape[0]
+        auxouts = SimpleNamespace(refined_cn=np.ones(nn))
+        return np.zeros(nn), np.zeros(nn), auxouts
     val, pos = zmultiCandIF(f0v, vrv)
     y, ind, _ = zremoveACinduction(x, fs, pos)
     if ind == 1:
@@ -210,10 +212,12 @@ def SourceInfobyMultiCues050111(
     f0raw0[f0ceil < f0raw0] = f0ceil
     f0raw0[(0 < f0raw0) & (f0raw0 < f0floor)] = f0floor
     f0raw2, ecr, _ = zrefineF06m(y, fs / dn, f0raw0, fftlf0r, tstretch, nhmx, shiftm)
+    f0raw2[f0ceil < f0raw2] = f0ceil
+    f0raw2[f0raw2 < f0floor] = f0floor
     vuv = zvuvdecision4(f0raw2, rels, pwsdb, shiftm, noiselevel)
     nnll = min(len(f0raw2), len(vuv))
 
-    auxouts = SimpleNamespace(refined_cn=ecr)
+    auxouts = SimpleNamespace(refined_cn=ecr[:nnll])
 
     return f0raw2[:nnll], vuv[:nnll], auxouts
 
@@ -1061,7 +1065,8 @@ def zmultiCandAC(
 
     ramp = np.arange(nc)[:, None]
     ramp3 = np.arange(-1, 2)[:, None, None]
-    mxp = np.argsort(-lagsms, axis=0)[:3].T
+    mxp = np.argsort(-lagsms, axis=0, kind="stable")[:3].T
+    mxp = np.clip(mxp, 1, nr - 2)
     pl, pos = zzParabolicInterp(lagspec[ramp3 + mxp, ramp], mxp)
     f0 = 1 / (pos * lx[1])
     return f0, pl
@@ -1192,7 +1197,8 @@ def zcombineRanking4(
 
     ramp = np.arange(n)[:, None]
     ramp3 = np.arange(-1, 2)[:, None, None]
-    mxp = np.argsort(-f0map, axis=1)[:, :6]
+    mxp = np.argsort(-f0map, axis=1, kind="stable")[:, :6]
+    mxp = np.clip(mxp, 1, f0map.shape[1] - 2)
     pl1, f01 = zzParabolicInterp(f0mapbak[ramp, ramp3 + mxp], mxp, clip=False)
     mask = f0map[ramp, mxp] == 0
     shifted_mask = np.roll(mask, -1, axis=1)
@@ -1328,7 +1334,7 @@ def zcontiguousSegment10(
     nn = min(len(pwsdb), len(f0cand), len(relv))
     pwsdb = pwsdb[:nn]
     f0cand = f0cand[:nn]
-    relv = relv[:nn]
+    relv = relv[:nn].copy()
     relv[relv == 0] = 1e-5
 
     noiselevel = calc_noise_level(pwsdb[:nn])

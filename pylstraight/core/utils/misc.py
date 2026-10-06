@@ -14,6 +14,8 @@
 # limitations under the License.                                           #
 # ------------------------------------------------------------------------ #
 
+from __future__ import annotations
+
 import math
 import os
 
@@ -66,7 +68,7 @@ def get_fft_length(
     return fft_length
 
 
-def normalize_waveform(x: np.ndarray) -> np.ndarray:
+def normalize_waveform(x: np.ndarray) -> tuple[np.ndarray, float]:
     """Normalize waveform.
 
     Parameters
