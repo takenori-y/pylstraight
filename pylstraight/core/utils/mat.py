@@ -22,7 +22,7 @@ from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Generator, Sequence
 
 import numpy as np
 from scipy import signal
@@ -418,7 +418,7 @@ def randn(shape: int | Sequence[int], scale: float = 1) -> np.ndarray:
 
 
 @contextmanager
-def fixed_seed(seed: int | None) -> Iterator[None]:
+def fixed_seed(seed: int | None) -> Generator[None, None, None]:
     """Fix the random number generator used by `randn` within the context.
 
     Parameters
