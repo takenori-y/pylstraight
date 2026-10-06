@@ -418,19 +418,19 @@ def randn(shape: int | Sequence[int], scale: float = 1) -> np.ndarray:
 
 
 @contextmanager
-def seed(s: int | None) -> Iterator[None]:
+def fixed_seed(seed: int | None) -> Iterator[None]:
     """Fix the random number generator used by `randn` within the context.
 
     Parameters
     ----------
-    s : int or None
+    seed : int or None
         The random seed. If None, the generator is not fixed.
 
     """
-    if s is None:
+    if seed is None:
         yield
         return
-    token = _rng.set(np.random.default_rng(s))
+    token = _rng.set(np.random.default_rng(seed))
     try:
         yield
     finally:

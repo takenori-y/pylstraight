@@ -30,10 +30,36 @@ from .core.ap import ApParam, exstraightAPind
 from .core.f0 import F0Param, MulticueF0v14
 from .core.sp import SpParam, exstraightspec
 from .core.syn import SynParam, exstraightsynth
-from .core.utils.mat import seed as _seed
+from .core.utils.mat import fixed_seed
 from .core.utils.misc import get_fft_length, normalize_waveform
 
+__all__ = [
+    "ApParam",
+    "F0Param",
+    "SpParam",
+    "SynParam",
+    "ap_to_ap",
+    "extract_ap",
+    "extract_f0",
+    "extract_sp",
+    "f0_to_f0",
+    "fromfile",
+    "init_ap_param",
+    "init_f0_param",
+    "init_sp_param",
+    "init_syn_param",
+    "magic_number",
+    "min_f0",
+    "min_fs",
+    "read",
+    "sp_to_sp",
+    "synthesize",
+    "write",
+]
+
 magic_number: float = -1e10
+min_f0: float = 40.0
+min_fs: int = 8000
 
 
 def f0_to_f0(
@@ -348,16 +374,16 @@ def _extract_f0(
 
     f0_floor, f0_ceil = f0_range
 
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
         msg = "Minimum frame shift is 1 ms."
         raise ValueError(msg)
 
-    if f0_floor < 40:
-        msg = "Minimum F0 floor is 40 Hz."
+    if f0_floor < min_f0:
+        msg = f"Minimum F0 floor is {min_f0} Hz."
         raise ValueError(msg)
 
     if fs / 2 < f0_ceil:
@@ -377,8 +403,8 @@ def _extract_f0(
 
     f0, vuv, auxouts = MulticueF0v14(x, fs, f0_param)
     f0 *= vuv
-    f0[f0_ceil < f0] = f0_ceil
     f0[(f0 != 0) & (f0 < f0_floor)] = f0_floor
+    f0[f0_ceil < f0] = f0_ceil
     f0 = f0_to_f0(f0, "linear", f0_format, fs=fs)
 
     if return_aux:
@@ -454,7 +480,7 @@ def extract_f0(
     array([193., 198., 200., 200., 200., 200.])
 
     """
-    with _seed(seed):
+    with fixed_seed(seed):
         f0 = _extract_f0(
             x,
             fs,
@@ -565,8 +591,8 @@ def extract_ap(
     """
     x, _ = normalize_waveform(x)
 
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
@@ -598,7 +624,7 @@ def extract_ap(
         )
         raise ValueError(msg)
 
-    with _seed(seed):
+    with fixed_seed(seed):
         ap = exstraightAPind(
             x,
             fs,
@@ -674,8 +700,8 @@ def extract_sp(
     """
     x, scaler = normalize_waveform(x)
 
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
@@ -699,7 +725,7 @@ def extract_sp(
         )
         raise ValueError(msg)
 
-    with _seed(seed):
+    with fixed_seed(seed):
         sp = exstraightspec(x, f0_to_f0(f0, f0_format, "linear", fs=fs), fs, sp_param)
     if scaler != 1:
         sp *= scaler
@@ -773,8 +799,8 @@ def synthesize(
     (2400,)
 
     """
-    if fs < 8000:
-        msg = "Minimum sampling frequency is 8000 Hz."
+    if fs < min_fs:
+        msg = f"Minimum sampling frequency is {min_fs} Hz."
         raise ValueError(msg)
 
     if frame_shift < 1:
@@ -796,7 +822,7 @@ def synthesize(
         syn_param = init_syn_param()
         syn_param.spectral_update_interval = frame_shift
 
-    with _seed(seed):
+    with fixed_seed(seed):
         return exstraightsynth(
             f0_to_f0(f0, f0_format, "linear", fs=fs),
             sp_to_sp(sp, sp_format, "linear"),

@@ -209,11 +209,11 @@ def SourceInfobyMultiCues050111(
     tstretch = prm.refine_time_stretching_factor
     nhmx = prm.refine_number_of_harmonic_component
     f0raw0 = np.nan_to_num(f0raw0, nan=0)
+    f0raw0[(f0raw0 != 0) & (f0raw0 < f0floor)] = f0floor
     f0raw0[f0ceil < f0raw0] = f0ceil
-    f0raw0[(0 < f0raw0) & (f0raw0 < f0floor)] = f0floor
     f0raw2, ecr, _ = zrefineF06m(y, fs / dn, f0raw0, fftlf0r, tstretch, nhmx, shiftm)
+    f0raw2[(f0raw2 != 0) & (f0raw2 < f0floor)] = f0floor
     f0raw2[f0ceil < f0raw2] = f0ceil
-    f0raw2[f0raw2 < f0floor] = f0floor
     vuv = zvuvdecision4(f0raw2, rels, pwsdb, shiftm, noiselevel)
     nnll = min(len(f0raw2), len(vuv))
 

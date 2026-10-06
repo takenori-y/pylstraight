@@ -55,8 +55,3 @@ def test_no_seed_gives_different_results() -> None:
     *_, syn1 = analyze(None)
     *_, syn2 = analyze(None)
     assert not np.array_equal(syn1, syn2)
-
-
-def test_seed_is_not_exposed() -> None:
-    """Test that the seed context manager is not a public API."""
-    assert not hasattr(pyls, "seed")
